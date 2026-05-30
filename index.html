@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>llm.playground // aprende mientras vibecodeas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Fraunces:ital,wght@0,400;0,700;0,900;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="scanlines">
+
+<div class="app">
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <div class="logo-dot"></div>
+      <h1 class="glitch" data-text="llm.playground">llm.playground</h1>
+    </div>
+    <div class="sub" data-i18n="tagline">// aprende cómo piensa una ia</div>
+  </div>
+  <div class="top-controls">
+    <span class="api-status" id="apiStatus"><span class="dot"></span><span id="apiStatusText">sin api</span></span>
+    <button class="btn" id="profile-btn" data-i18n="profileBtn">perfil</button>
+    <button class="btn ghost" id="lang-toggle">EN / ES</button>
+    <button class="btn" id="open-api-btn" data-i18n="apiBtn">api key</button>
+    <button class="btn ghost" id="home-btn" data-i18n="homeBtn">inicio</button>
+  </div>
+</header>
+
+<main>
+
+<section id="view-home">
+  <div class="hero">
+    <div>
+      <h2 data-i18n="heroTitle">cómo <em>piensa</em><br>una ia?</h2>
+      <p data-i18n="heroDesc">Vibecodeaste algo en AI Studio en 5 minutos. Cool. Pero ¿sabes qué pasó por dentro? Tokens, temperatura, contexto, agentes — el motor real. Juega para entenderlo.</p>
+      <div class="hero-actions">
+        <button class="btn primary" id="start-tutorial" data-i18n="startTutorial">→ tutorial (5 min)</button>
+        <button class="btn primary alt" id="start-games" data-i18n="startGames">▶ jugar</button>
+        <button class="btn" id="open-sandbox" data-i18n="sandboxBtn">sandbox</button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div style="color:var(--ink-dim);margin-bottom:8px">> prompt: "haiku sobre el café"</div>
+      <div style="margin-bottom:12px">
+        <span class="token">El</span><span class="token alt">aroma</span><span class="token">despierta</span><span class="token alt2">mi</span><span class="token">alma</span><span class="token alt">dormida</span>
+      </div>
+      <div style="color:var(--ink-dim);font-size:10px">↑ 6 tokens · temp=0.7 · top_p=0.9</div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px dashed var(--border);color:var(--accent-2);font-size:10px">
+        cada palabra = predicción probabilística<br>
+        cada parámetro = cambia el resultado
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="games" data-i18n="tabGames">juegos</button>
+    <button class="tab" data-tab="tutorial" data-i18n="tabTutorial">tutorial</button>
+    <button class="tab" data-tab="sandbox" data-i18n="tabSandbox">sandbox</button>
+    <button class="tab" data-tab="leaderboard" data-i18n="tabLb">leaderboard</button>
+  </div>
+
+  <div id="tab-games">
+    <div class="games-grid" id="gamesGrid"></div>
+  </div>
+
+  <div id="tab-tutorial" class="hidden">
+    <div class="levels" id="levelsGrid"></div>
+  </div>
+
+  <div id="tab-sandbox" class="hidden">
+    <div class="sandbox">
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="paramsTitle">parámetros</span><span class="tag">live</span></div>
+        <div class="slider-row">
+          <label><span data-i18n="tempLabel">temperatura</span><span class="value" id="sb-temp-val">0.7</span></label>
+          <input type="range" id="sb-temp" min="0" max="2" step="0.1" value="0.7">
+          <div style="font-size:10px;color:var(--ink-dim)" data-i18n="tempDesc">0 = determinista · 2 = caótico</div>
+        </div>
+        <div class="slider-row">
+          <label><span data-i18n="topPLabel">top_p</span><span class="value" id="sb-topp-val">0.9</span></label>
+          <input type="range" id="sb-topp" min="0.1" max="1" step="0.05" value="0.9">
+          <div style="font-size:10px;color:var(--ink-dim)" data-i18n="topPDesc">qué tan amplio el muestreo</div>
+        </div>
+        <div class="slider-row">
+          <label><span data-i18n="maxLabel">max tokens</span><span class="value" id="sb-max-val">500</span></label>
+          <input type="range" id="sb-max" min="50" max="2000" step="50" value="500">
+        </div>
+        <div class="slider-row">
+          <label data-i18n="modelLabel">modelo</label>
+          <select id="sb-model">
+            <option value="gemini-2.5-flash-lite">> gemini-2.5-flash-lite (más barato)</option>
+            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+            <option value="gemini-2.5-pro">gemini-2.5-pro (caro)</option>
+          </select>
+        </div>
+        <div class="slider-row">
+          <label data-i18n="presetsLabel">presets</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <button class="btn" style="font-size:10px;padding:6px 10px" data-preset="precise" data-i18n="presetPrecise">preciso</button>
+            <button class="btn" style="font-size:10px;padding:6px 10px" data-preset="creative" data-i18n="presetCreative">creativo</button>
+            <button class="btn" style="font-size:10px;padding:6px 10px" data-preset="chaotic" data-i18n="presetChaotic">caótico</button>
+          </div>
+        </div>
+        <div class="slider-row">
+          <label><span data-i18n="modeLabel">modo</span></label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="sb-mode-buttons">
+            <button class="btn" data-mode="single" style="font-size:10px;padding:6px 10px;border-color:var(--accent);color:var(--accent)" data-i18n="modeSingle">single</button>
+            <button class="btn" data-mode="stream" style="font-size:10px;padding:6px 10px" data-i18n="modeStream">streaming</button>
+            <button class="btn" data-mode="compare" style="font-size:10px;padding:6px 10px" data-i18n="modeCompare">comparar</button>
+          </div>
+        </div>
+        <div class="slider-row" id="sb-compare-row" style="display:none">
+          <label data-i18n="model2Label">modelo b (compare)</label>
+          <select id="sb-model-b">
+            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+          </select>
+        </div>
+        <div class="slider-row">
+          <label data-i18n="templatesLabel">templates</label>
+          <select id="sb-template">
+            <option value="">— elegir template —</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="promptTitle">prompt</span><span class="tag">⌘ + ↵</span></div>
+        <label data-i18n="systemLabel">system (opcional)</label>
+        <textarea id="sb-system" rows="2" placeholder="Eres un asistente sarcástico..."></textarea>
+        <label>
+          <span data-i18n="userLabel">user</span>
+          <span class="value" id="sb-live-tokens" style="font-size:10px">0 tok</span>
+        </label>
+        <textarea id="sb-prompt" rows="4" placeholder="Escribe un haiku sobre el caos..."></textarea>
+        <div id="sb-output-area">
+          <div class="output empty" id="sb-output" data-i18n="outputEmpty">// la respuesta aparecerá aquí</div>
+        </div>
+        <div id="sb-output-area-b" style="display:none">
+          <div class="output empty" id="sb-output-b">// model b</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--ink-dim)" id="sb-stats"></div>
+        <div class="actions-row">
+          <button class="btn primary" id="sb-run" data-i18n="runBtn">→ ejecutar</button>
+          <button class="btn" id="sb-tokenize" data-i18n="tokenizeBtn">ver tokens</button>
+          <button class="btn ghost" id="sb-history-btn" data-i18n="historyBtn">historial</button>
+          <button class="btn ghost" id="sb-clear" data-i18n="clearBtn">limpiar</button>
+        </div>
+        <div id="sb-history" class="sb-history hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-leaderboard" class="hidden">
+    <div class="lb-container" id="lbContainer"></div>
+  </div>
+</section>
+
+<section id="view-level" class="hidden">
+  <div class="progress-bar" id="progressBar"></div>
+  <div class="level-view active">
+    <div class="panel">
+      <div class="panel-title"><span id="level-tag">nivel 1/5</span><span class="tag" id="level-concept-tag">tokens</span></div>
+      <div class="level-intro">
+        <h3 id="level-title">—</h3>
+        <div class="concept" id="level-concept">—</div>
+        <div class="challenge-box">
+          <span class="label" data-i18n="challengeLabel">reto</span>
+          <span id="level-challenge">—</span>
+        </div>
+      </div>
+      <div id="level-controls"></div>
+      <div class="actions-row">
+        <button class="btn primary" id="level-run" data-i18n="runBtn">→ ejecutar</button>
+        <button class="btn ghost" id="level-skip" data-i18n="skipBtn">saltar</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span data-i18n="outputLabel">salida</span><span class="tag" id="output-tag">// llm</span></div>
+      <div class="output empty" id="level-output" data-i18n="outputEmpty">// la respuesta aparecerá aquí</div>
+      <div id="level-visual"></div>
+      <div class="feedback" id="level-feedback"></div>
+      <div class="actions-row">
+        <button class="btn" id="level-next" data-i18n="nextBtn" style="display:none">siguiente →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="view-game" class="hidden">
+  <div id="game-container"></div>
+</section>
+
+</main>
+
+<footer>
+  <span data-i18n="footerLeft">// playground v2.0 · built for curious humans</span>
+  <span><span data-i18n="footerRight">teclas:</span> <span class="kbd">⌘↵</span> <span data-i18n="footerRun">ejecutar</span> · <span class="kbd">esc</span> <span data-i18n="footerHome">inicio</span></span>
+</footer>
+
+</div>
+
+<div class="arcade" id="arcade">
+  <div class="arcade-hud" id="arcade-hud"></div>
+  <div class="arcade-stage" id="arcade-stage"></div>
+  <div class="arcade-dialog" id="arcade-dialog"></div>
+</div>
+
+<div class="modal-bg" id="apiModal">
+  <div class="modal">
+    <h3 data-i18n="apiTitle">conectar vertex ai</h3>
+    <p data-i18n="apiDesc">Pega tu API key de Google AI Studio o credenciales de Vertex AI. Se guarda solo en tu navegador, nunca se envía a ningún server.</p>
+
+    <div class="tabs" style="margin-bottom:16px">
+      <button class="tab active" data-api-tab="studio">AI Studio</button>
+      <button class="tab" data-api-tab="vertex">Vertex AI</button>
+    </div>
+
+    <div id="api-studio">
+      <div class="field">
+        <label data-i18n="apiKeyLabel">api key</label>
+        <input type="password" id="studio-key" placeholder="AIza...">
+      </div>
+      <p style="font-size:11px;margin-bottom:16px"><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--accent)" data-i18n="getKeyLink">→ obtener key gratis en aistudio.google.com</a></p>
+    </div>
+
+    <div id="api-vertex" class="hidden">
+      <div class="field">
+        <label>project id</label>
+        <input type="text" id="vertex-project" placeholder="my-gcp-project">
+      </div>
+      <div class="field">
+        <label>location</label>
+        <input type="text" id="vertex-location" placeholder="us-central1" value="us-central1">
+      </div>
+      <div class="field">
+        <label>access token (bearer)</label>
+        <input type="password" id="vertex-token" placeholder="ya29...">
+      </div>
+      <p style="font-size:11px;margin-bottom:16px;color:var(--ink-dim)" data-i18n="vertexNote">// genera con: gcloud auth print-access-token</p>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" id="save-api" data-i18n="saveBtn">guardar</button>
+      <button class="btn ghost" id="clear-api" data-i18n="clearKeyBtn">borrar</button>
+      <button class="btn ghost" id="close-api" style="margin-left:auto" data-i18n="closeBtn">cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="nameModal">
+  <div class="modal">
+    <h3 data-i18n="profileTitle">perfil</h3>
+    <p data-i18n="profileDesc">Tu nombre aparece en el leaderboard local. No se envia a ningun lado.</p>
+    <div class="field">
+      <label data-i18n="profileNameLabel">nombre</label>
+      <input type="text" id="userName" maxlength="20" placeholder="player_one">
+    </div>
+    <div id="profileInfo" style="display:none;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--ink-dim);line-height:1.6" id="profileStats"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" id="save-name" data-i18n="saveBtn">guardar</button>
+      <button class="btn danger" id="logout-btn" style="display:none" data-i18n="logoutBtn">cerrar sesion</button>
+      <button class="btn ghost" id="skip-name" style="margin-left:auto" data-i18n="closeBtn">cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="aiInspector" class="ai-inspector">
+  <div class="inspector-header">
+    <span class="inspector-title">> AI INSPECTOR</span>
+    <button class="inspector-close" onclick="App.toggleInspector(false)">x</button>
+  </div>
+  <div class="inspector-body" id="inspectorBody">
+    <div class="inspector-empty" data-i18n="inspectorEmpty">// haz una acción y vuelve aquí para ver cómo pensó la IA</div>
+  </div>
+</div>
+
+<div class="modal-bg" id="scoreModal">
+  <div class="modal">
+    <h3 data-i18n="scoreTitle">¡resultado!</h3>
+    <div id="scoreBody"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn primary" id="score-again" data-i18n="playAgain">jugar de nuevo</button>
+      <button class="btn" id="score-leaderboard" data-i18n="viewLb">ver leaderboard</button>
+      <button class="btn ghost" id="score-home" data-i18n="homeBtn">inicio</button>
+    </div>
+  </div>
+</div>
+
+<script src="i18n.js"></script>
+<script src="sound.js"></script>
+<script src="games.js"></script>
+<script src="quiz.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
