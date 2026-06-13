@@ -4,7 +4,7 @@ const $$=s=>document.querySelectorAll(s);
 const state={
   lang:localStorage.getItem('lang')||'es',
   api:JSON.parse(localStorage.getItem('api')||'null'),
-  progress:JSON.parse(localStorage.getItem('progress')||'{}'),
+  progress:JSON.parse(localStorage.getItem('progress_'+(localStorage.getItem('userName')||''))||'{}'),
   scores:JSON.parse(localStorage.getItem('scores')||'[]'),
   userName:localStorage.getItem('userName')||'',
   currentLevel:0,
@@ -101,6 +101,7 @@ const App={
       {id:'roulette',data:games.roulette},
       {id:'detective',data:games.detective},
       {id:'defender',data:games.defender},
+      {id:'tycoon',data:games.tycoon},
       {id:'quiz',data:games.quiz||{name:'quiz master',icon:'?',desc:'20 preguntas',difficulty:'5 min'}}
     ];
     grid.innerHTML=list.map(g=>{
@@ -123,7 +124,7 @@ const App={
     const cont=$('#lbContainer');
     if(!cont) return;
     const cols=I18N[lang].lbCols;
-    const games={roulette:I18N[lang].games.roulette.name,detective:I18N[lang].games.detective.name,defender:I18N[lang].games.defender.name,quiz:'Quiz Master'};
+    const games={roulette:I18N[lang].games.roulette.name,detective:I18N[lang].games.detective.name,defender:I18N[lang].games.defender.name,tycoon:I18N[lang].games.tycoon.name,quiz:'Quiz Master'};
     
     let html=`<h3 style="font-family:Fraunces,serif;font-size:32px;font-weight:900;font-style:italic;margin-bottom:24px">${I18N[lang].lbTitle}</h3>`;
     
@@ -793,7 +794,7 @@ const App={
   
   completeLevel(id,msg){
     state.progress[id]=true;
-    localStorage.setItem('progress',JSON.stringify(state.progress));
+    localStorage.setItem('progress_'+state.userName,JSON.stringify(state.progress));
     this.showFeedback(msg);
     $('#level-next').style.display='inline-block';
     this.renderProgressBar();
@@ -1163,6 +1164,14 @@ const App={
         <div class="score-row"><span>${s.tokensUsed}</span><span class="v">${data.tokens}</span></div>
         <div class="score-row"><span>${s.timeMs}</span><span class="v">${data.time}s</span></div>
       `;
+    } else if(gameId==='tycoon'){
+      const lang=state.lang;
+      rows=`
+        <div class="score-row"><span>${lang==='es'?'Precisión':'Accuracy'}</span><span class="v" style="color:var(--success)">${data.accuracy}%</span></div>
+        <div class="score-row"><span>${lang==='es'?'Parámetros':'Parameters'}</span><span class="v">${data.params}</span></div>
+        <div class="score-row"><span>${lang==='es'?'Bonus Eficiencia':'Efficiency Bonus'}</span><span class="v" style="color:var(--accent)">+${data.efficiencyBonus}</span></div>
+        <div class="score-row"><span>${s.timeMs}</span><span class="v">${data.time}s</span></div>
+      `;
     } else if(gameId==='quiz'){
       const lang=state.lang;
       const L=lang==='es';
@@ -1265,6 +1274,7 @@ const App={
       if(!n) return alert(state.lang==='es'?'Escribe un nombre':'Enter a name');
       state.userName=n.slice(0,20);
       localStorage.setItem('userName',state.userName);
+      state.progress=JSON.parse(localStorage.getItem('progress_'+state.userName)||'{}');
       $('#nameModal').classList.remove('open');
       this.applyI18N();
       if(this._pendingGame){
@@ -1279,6 +1289,7 @@ const App={
       if(this._pendingGame && !state.userName){
         state.userName='anon_'+Math.random().toString(36).slice(2,6);
         localStorage.setItem('userName',state.userName);
+        state.progress={};
         this.applyI18N();
         const g=this._pendingGame;
         this._pendingGame=null;
@@ -1288,15 +1299,11 @@ const App={
     
     $('#logout-btn').onclick=()=>{
       const lang=state.lang;
-      const msg=lang==='es'?'Esto borrara tu nombre, progreso y scores. Continuar?':'This will clear your name, progress and scores. Continue?';
+      const msg=lang==='es'?'Esto cerrara tu sesion. Continuar?':'This will log you out. Continue?';
       if(!confirm(msg)) return;
       state.userName='';
       state.progress={};
-      state.scores=[];
       localStorage.removeItem('userName');
-      localStorage.removeItem('progress');
-      localStorage.removeItem('scores');
-      localStorage.removeItem('sbHistory');
       $('#nameModal').classList.remove('open');
       this.applyI18N();
     };
