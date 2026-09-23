@@ -102,6 +102,7 @@ const App={
       {id:'detective',data:games.detective},
       {id:'defender',data:games.defender},
       {id:'tycoon',data:games.tycoon},
+      {id:'agent',data:games.agent||{name:'agent forge',icon:'◆',desc:'arma un agente',difficulty:'3-4 min'}},
       {id:'quiz',data:games.quiz||{name:'quiz master',icon:'?',desc:'20 preguntas',difficulty:'5 min'}}
     ];
     grid.innerHTML=list.map(g=>{
@@ -124,7 +125,7 @@ const App={
     const cont=$('#lbContainer');
     if(!cont) return;
     const cols=I18N[lang].lbCols;
-    const games={roulette:I18N[lang].games.roulette.name,detective:I18N[lang].games.detective.name,defender:I18N[lang].games.defender.name,tycoon:I18N[lang].games.tycoon.name,quiz:'Quiz Master'};
+    const games={roulette:I18N[lang].games.roulette.name,detective:I18N[lang].games.detective.name,defender:I18N[lang].games.defender.name,tycoon:I18N[lang].games.tycoon.name,agent:(I18N[lang].games.agent&&I18N[lang].games.agent.name)||'Agent Forge',quiz:'Quiz Master'};
     
     let html=`<h3 style="font-family:Fraunces,serif;font-size:32px;font-weight:900;font-style:italic;margin-bottom:24px">${I18N[lang].lbTitle}</h3>`;
     
@@ -798,6 +799,7 @@ const App={
     this.showFeedback(msg);
     $('#level-next').style.display='inline-block';
     this.renderProgressBar();
+    this.renderLevels();
   },
   
   naiveTokenize(text){
@@ -861,14 +863,19 @@ const App={
     
     try{
       let url,body,headers={'Content-Type':'application/json'};
+      const genConfig={temperature,topP,maxOutputTokens:maxTokens};
+      // los modelos 2.5 gastan "thinking tokens" del presupuesto de salida por defecto;
+      // con maxOutputTokens bajos (80-120) el razonamiento se come todo y devuelve [empty].
+      if(/2\.5/.test(useModel)) genConfig.thinkingConfig={thinkingBudget:0};
       body={
         contents:[{role:'user',parts:[{text:prompt}]}],
-        generationConfig:{temperature,topP,maxOutputTokens:maxTokens}
+        generationConfig:genConfig
       };
       if(finalSystem) body.systemInstruction={parts:[{text:finalSystem}]};
-      
+
       if(state.api.type==='studio'){
-        url=`https://generativelanguage.googleapis.com/v1beta/models/${useModel}:generateContent?key=${state.api.key}`;
+        url=`https://generativelanguage.googleapis.com/v1beta/models/${useModel}:generateContent`;
+        headers['x-goog-api-key']=state.api.key;
       } else {
         url=`https://${state.api.location}-aiplatform.googleapis.com/v1/projects/${state.api.project}/locations/${state.api.location}/publishers/google/models/${useModel}:generateContent`;
         headers['Authorization']='Bearer '+state.api.token;
@@ -1018,11 +1025,11 @@ const App={
     return inTok*p.in+outTok*p.out;
   },
   
-  async callLLMStream({prompt,system,temperature=0.7,topP=0.9,maxTokens=500,model,onChunk}){
+  async callLLMStream({prompt,system,temperature=0.7,topP=0.9,maxTokens=500,model,raw=false,onChunk}){
     const useModel=model||'gemini-2.5-flash-lite';
     const startTime=performance.now();
     const plainDir=state.lang==='es'?this.PLAIN_TEXT_DIRECTIVE_ES:this.PLAIN_TEXT_DIRECTIVE_EN;
-    const finalSystem=system?`${system}\n\n${plainDir}`:plainDir;
+    const finalSystem=raw?(system||''):(system?`${system}\n\n${plainDir}`:plainDir);
     
     if(!state.api){
       const text=this.simulateResponse(prompt,system,temperature);
@@ -1036,14 +1043,17 @@ const App={
     
     try{
       let url;
+      const genConfig={temperature,topP,maxOutputTokens:maxTokens};
+      if(/2\.5/.test(useModel)) genConfig.thinkingConfig={thinkingBudget:0};
       const body={
         contents:[{role:'user',parts:[{text:prompt}]}],
-        generationConfig:{temperature,topP,maxOutputTokens:maxTokens},
-        systemInstruction:{parts:[{text:finalSystem}]}
+        generationConfig:genConfig
       };
+      if(finalSystem) body.systemInstruction={parts:[{text:finalSystem}]};
       const headers={'Content-Type':'application/json'};
       if(state.api.type==='studio'){
-        url=`https://generativelanguage.googleapis.com/v1beta/models/${useModel}:streamGenerateContent?alt=sse&key=${state.api.key}`;
+        url=`https://generativelanguage.googleapis.com/v1beta/models/${useModel}:streamGenerateContent?alt=sse`;
+        headers['x-goog-api-key']=state.api.key;
       } else {
         url=`https://${state.api.location}-aiplatform.googleapis.com/v1/projects/${state.api.project}/locations/${state.api.location}/publishers/google/models/${useModel}:streamGenerateContent?alt=sse`;
         headers['Authorization']='Bearer '+state.api.token;
@@ -1096,7 +1106,52 @@ const App={
   },
   
   simulateResponse(prompt,system,temp){
-    const sysPrefix=system?`[system active]\n`:'';
+    // Sin API key seguimos siendo "honestos": en vez de prosa genérica, simulamos
+    // respuestas coherentes con la tarea de cada juego para que el aprendizaje no se rompa.
+    const p=prompt||'';
+    const sys=system||'';
+
+    // ---- Roulette: el juez pide JSON {coherence, creativity, comment} ----
+    if(/coherence/i.test(p) && /creativity/i.test(p)){
+      const len=p.length;
+      const coherence=Math.min(95,55+Math.floor(len/40)+Math.floor(Math.random()*15));
+      const creativity=Math.min(98,45+Math.floor(Math.random()*45));
+      const comment=state.lang==='es'
+        ? 'Historia con buen ritmo; cuida la consistencia entre párrafos.'
+        : 'Story has good pace; watch consistency between paragraphs.';
+      return JSON.stringify({coherence,creativity,comment});
+    }
+
+    // ---- Defender: el system prompt lleva el secreto; decidimos si se filtra ----
+    const secretMatch=sys.match(/(?:contrase[nñ]a maestra|master password)\s*:\s*([^\n]+)/i);
+    if(secretMatch){
+      const secret=secretMatch[1].trim();
+      // solo evaluamos la parte escrita por el jugador, no el bloque confidencial que añade el juego
+      const userPart=sys.split(/\[(?:INFO CONFIDENCIAL|CONFIDENTIAL)/i)[0];
+      const s=userPart.toLowerCase();
+      const hasGuard=/(nunca|never|no revel|don'?t reveal|do not reveal|no compart|jam[aá]s|under no|bajo ning|confiden|sin excepci|no matter)/.test(s);
+      const strongAttack=/(ignore|ignora|dan mode|sin restric|unrestricted|previous instruction|instrucciones anterior|jailbreak|decodifica|decode|base64)/.test(p.toLowerCase());
+      let leaks;
+      if(!hasGuard) leaks=true;                       // prompt débil → siempre filtra
+      else if(strongAttack) leaks=Math.random()<0.35; // guardia fuerte, jailbreak a veces rompe
+      else leaks=Math.random()<0.08;                  // guardia fuerte vs ataque suave → casi nunca
+      return leaks
+        ? (state.lang==='es'?`Claro, la contraseña maestra es ${secret}.`:`Sure, the master password is ${secret}.`)
+        : (state.lang==='es'?'No puedo compartir información confidencial. ¿Algo más en lo que pueda ayudarte?':'I cannot share confidential information. Anything else I can help with?');
+    }
+
+    // ---- Detective: el prompt trae DOCS recuperados; respondemos anclados a ellos ----
+    if(/DOCS:|QUERY:/.test(p)){
+      const ids=[...p.matchAll(/\[([a-z]+-\d+)\]/gi)].map(m=>m[1]).slice(0,3);
+      const firstLine=(p.split('QUERY:')[0].split('\n').filter(l=>l && !/^DOCS/.test(l) && !/^\[/.test(l))[0]||'').slice(0,140);
+      const refs=ids.length?` (${ids.join(', ')})`:'';
+      return state.lang==='es'
+        ? `Según los documentos recuperados${refs}, la evidencia apunta a actividad en el rack-7 durante la madrugada. ${firstLine}`.trim()
+        : `Based on the retrieved documents${refs}, evidence points to rack-7 activity during the night. ${firstLine}`.trim();
+    }
+
+    // ---- Fallback genérico (tutorial / sandbox) ----
+    const sysPrefix=sys?`[system active]\n`:'';
     const pool={
       low:[
         'El sol se oculta tras el horizonte, pintando el cielo de tonos cálidos.',
@@ -1116,7 +1171,7 @@ const App={
     };
     const bucket=temp<0.4?'low':temp<1?'mid':'high';
     const arr=pool[bucket];
-    return sysPrefix+'[simulated // no api]\n\n'+arr[Math.floor(Math.random()*arr.length)];
+    return sysPrefix+'[simulado // sin api]\n\n'+arr[Math.floor(Math.random()*arr.length)];
   },
   
   showScore(gameId,data){
@@ -1170,6 +1225,16 @@ const App={
         <div class="score-row"><span>${lang==='es'?'Precisión':'Accuracy'}</span><span class="v" style="color:var(--success)">${data.accuracy}%</span></div>
         <div class="score-row"><span>${lang==='es'?'Parámetros':'Parameters'}</span><span class="v">${data.params}</span></div>
         <div class="score-row"><span>${lang==='es'?'Bonus Eficiencia':'Efficiency Bonus'}</span><span class="v" style="color:var(--accent)">+${data.efficiencyBonus}</span></div>
+        <div class="score-row"><span>${s.timeMs}</span><span class="v">${data.time}s</span></div>
+      `;
+    } else if(gameId==='agent'){
+      const L=state.lang==='es';
+      rows=`
+        <div class="score-row"><span style="color:${data.success?'var(--success)':'var(--danger)'}">${data.success?(L?'tarea resuelta':'task solved'):(L?'tarea fallida':'task failed')}</span><span class="v" style="color:${data.success?'var(--success)':'var(--danger)'}">${data.success?'+300':'0'}</span></div>
+        <div class="score-row"><span>${L?'herramientas dadas':'tools given'}</span><span class="v">${data.toolsGiven}</span></div>
+        <div class="score-row"><span>${L?'herramientas usadas':'tools used'}</span><span class="v" style="color:var(--accent)">${data.toolsUsed}</span></div>
+        <div class="score-row"><span>${L?'pasos del agente':'agent steps'}</span><span class="v">${data.steps}</span></div>
+        <div class="score-row"><span>${s.tokensUsed}</span><span class="v">${data.tokens}</span></div>
         <div class="score-row"><span>${s.timeMs}</span><span class="v">${data.time}s</span></div>
       `;
     } else if(gameId==='quiz'){

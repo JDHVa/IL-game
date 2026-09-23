@@ -42,7 +42,7 @@ const I18N={
     saveBtn:'guardar',
     clearKeyBtn:'borrar',
     closeBtn:'cerrar',
-    footerLeft:'// playground v2.0 · hecho para humanos curiosos',
+    footerLeft:'// Iron Lion 4977 · hecho para humanos curiosos',
     footerRight:'teclas:',
     footerRun:'ejecutar',
     footerHome:'inicio',
@@ -156,6 +156,12 @@ const I18N={
         params:'Parámetros',
         overfitting:'¡Alerta de Overfitting!',
         networkTitle:'tu arquitectura'
+      },
+      agent:{
+        name:'agent forge',
+        icon:'◆',
+        desc:'Arma un agente: dale las herramientas justas y un system prompt, y míralo resolver una tarea paso a paso.',
+        difficulty:'medio · 3-4 min'
       }
     },
     
@@ -234,7 +240,7 @@ const I18N={
     saveBtn:'save',
     clearKeyBtn:'clear',
     closeBtn:'close',
-    footerLeft:'// playground v2.0 · built for curious humans',
+    footerLeft:'//  Iron Lion 4977 · built for curious humans',
     footerRight:'keys:',
     footerRun:'run',
     footerHome:'home',
@@ -348,6 +354,12 @@ const I18N={
         params:'Parameters',
         overfitting:'Overfitting Alert!',
         networkTitle:'your architecture'
+      },
+      agent:{
+        name:'agent forge',
+        icon:'◆',
+        desc:'Build an agent: give it the right tools and a system prompt, watch it solve a task step by step.',
+        difficulty:'medium · 3-4 min'
       }
     },
     
